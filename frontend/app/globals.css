@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+@theme {
+  /* Deep-navy dark-mode-first background scale. */
+  --color-bg-deep: #05070f;
+  --color-bg-navy: #0a0f1e;
+  --color-bg-navy-soft: #0e1526;
+  --color-bg-navy-elevated: #121a30;
+
+  /* Per-role identity accents, retuned for a dark glass UI: a bright accent (text/icon/border),
+     a saturated "-dark" shade (gradient end-stop, hover), and a dark tinted "-light" shade used
+     as a solid highlight/badge surface (NOT a pastel — on dark UI the "light" tier is a dark
+     tint, not a light one). Every existing bg-admin/text-operator/bg-member-light/etc. usage
+     across the app picks up the new look automatically since only these values change. */
+  --color-admin: #2dd4bf;
+  --color-admin-dark: #0d9488;
+  --color-admin-light: #0f2b27;
+
+  --color-operator: #60a5fa;
+  --color-operator-dark: #4f46e5;
+  --color-operator-light: #131c3a;
+
+  --color-member: #c084fc;
+  --color-member-dark: #7c3aed;
+  --color-member-light: #23163d;
+
+  /* Legacy alias tokens, kept so any remaining bare "brand" usages stay on-theme. */
+  --color-brand: #2dd4bf;
+  --color-brand-light: #0f2b27;
+  --color-brand-dark: #0d9488;
+
+  --color-danger: #f87171;
+  --color-danger-dark: #dc2626;
+  --color-danger-light: #2a1316;
+  --color-warning: #fbbf24;
+  --color-success: #34d399;
+
+  /* Soft dark elevation + colored glow tokens — the glassmorphism card/button treatment. */
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 8px 24px -6px rgb(0 0 0 / 0.5);
+  --shadow-soft-lg: 0 4px 12px 0 rgb(0 0 0 / 0.4), 0 24px 60px -12px rgb(0 0 0 / 0.6);
+  --shadow-glow-admin: 0 0 0 1px rgb(45 212 191 / 0.15), 0 8px 30px -6px rgb(45 212 191 / 0.35);
+  --shadow-glow-operator: 0 0 0 1px rgb(96 165 250 / 0.15), 0 8px 30px -6px rgb(96 165 250 / 0.35);
+  --shadow-glow-member: 0 0 0 1px rgb(192 132 252 / 0.15), 0 8px 30px -6px rgb(192 132 252 / 0.35);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+
+  /* Light "content" surface tokens — used inside dashboard content areas (sidebars/headers
+     stay on the dark chrome tokens above, unchanged). A soft lavender-blue page ground with
+     white cards, matching the reference dashboard mockups. */
+  --color-content-bg: #f3f5fb;
+  --color-content-card: #ffffff;
+  --color-content-border: #e7eaf3;
+  --color-content-text: #1b2233;
+  --color-content-muted: #6b7280;
+  --color-content-muted-2: #94a3b8;
+
+  /* Pastel icon-badge pairs (bg tint + saturated icon/text color) for KPI cards. */
+  --color-badge-blue-bg: #e8f0fe;
+  --color-badge-blue-fg: #2563eb;
+  --color-badge-indigo-bg: #eae7fd;
+  --color-badge-indigo-fg: #6366f1;
+  --color-badge-purple-bg: #f3e8fd;
+  --color-badge-purple-fg: #9333ea;
+  --color-badge-teal-bg: #e1f7f2;
+  --color-badge-teal-fg: #0d9488;
+  --color-badge-green-bg: #e5f8ec;
+  --color-badge-green-fg: #16a34a;
+  --color-badge-orange-bg: #fdf0e3;
+  --color-badge-orange-fg: #ea8c1f;
+  --color-badge-red-bg: #fdeaea;
+  --color-badge-red-fg: #dc2626;
+
+  --shadow-content: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 8px 20px -6px rgb(15 23 42 / 0.08);
+  --shadow-content-lg: 0 2px 4px 0 rgb(15 23 42 / 0.04), 0 16px 40px -12px rgb(15 23 42 / 0.12);
+}
+
+@layer base {
+  html {
+    /* Makes every native form control (select option lists, scrollbars, checkboxes) render
+       dark by default instead of the OS light theme -- this app has no light mode. */
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-bg-deep text-white;
+  }
+
+  /* Neutral baseline focus ring for native elements not wrapped in a design-system primitive
+     (e.g. plain <select>/<a>). Components with their own focus-visible ring take precedence
+     visually since both render, but this guarantees nothing is ever focus-invisible. */
+  :focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Sparse decorative dot-grid used behind hero/login compositions (GlowBackground component). */
+.bg-dot-grid {
+  background-image: radial-gradient(rgb(96 165 250 / 0.35) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(0, -14px);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.18s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.15s ease-out;
+}
+
+.animate-float-slow {
+  animation: float-slow 7s ease-in-out infinite;
+}

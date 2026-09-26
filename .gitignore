@@ -1,0 +1,46 @@
+# Backend local env
+backend/.env
+
+# Frontend local env
+frontend/.env
+frontend/.env.local
+
+# Deploy env (contains secrets)
+deploy/.env
+
+# Python
+backend/.venv
+backend/**/__pycache__
+backend/.pytest_cache
+**/__pycache__
+*.pyc
+
+# Node
+frontend/node_modules
+frontend/.next
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE
+.idea/
+.vscode/
+
+# Uploads (runtime data)
+backend/uploads/
+
+# Vercel
+frontend/.vercel
+frontend/api/backend_src
+
+# Docker
+deploy/ssl/
+
+# Delivery: do not include in zip
+*.zip
+
+# Local credential notes (never commit)
+Login's.txt

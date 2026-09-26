@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew chat-support IP SSL certificate
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/renew-chat-support-ip-ssl
