@@ -14,6 +14,7 @@ from app.models import (
     ChatSessionStatus,
     MemberAssignment,
     MembershipStatus,
+    Message,
     OperatorAssignment,
     OperatorMistake,
     OperatorMistakeType,
@@ -381,6 +382,61 @@ def test_next_customer_message_opens_a_new_session_after_previous_closed(db):
 
     assert second.id != first.id
     assert second.status == ChatSessionStatus.ACTIVE
+
+
+def test_operator_message_rejected_after_session_expires(db):
+    """Post-3-minute enforcement: once the session has lazily auto-closed (deadline in the
+    real past), an operator send must be rejected with 409 and never persisted -- the same
+    choke point (conversation_service.create_message) used by both the WS and REST paths."""
+    _, operator, member, conv = _setup(db)
+    long_ago = datetime.now(timezone.utc) - timedelta(seconds=200)
+    chat_session_service.ensure_active_session(db, conversation=conv, now=long_ago)
+    db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        conversation_service.create_message(
+            db, project_id=conv.project_id, conversation_id=conv.id, sender=operator, content="are you still there?", conversation=conv,
+        )
+    assert exc.value.status_code == 409
+    db.commit()
+
+    session = chat_session_service.get_latest_session(db, conversation_id=conv.id)
+    assert session.status == ChatSessionStatus.AUTO_CLOSED
+    assert db.query(Message).filter_by(conversation_id=conv.id, content="are you still there?").count() == 0
+
+
+def test_operator_message_still_allowed_before_session_expires(db):
+    """Case 1 control: a normal in-window operator reply must not be affected by the new check."""
+    _, operator, member, conv = _setup(db)
+    t0 = datetime.now(timezone.utc)
+    chat_session_service.ensure_active_session(db, conversation=conv, now=t0)
+    db.commit()
+
+    msg = conversation_service.create_message(
+        db, project_id=conv.project_id, conversation_id=conv.id, sender=operator, content="On it!", conversation=conv,
+    )
+    db.commit()
+
+    assert msg.id is not None
+    assert db.query(Message).filter_by(conversation_id=conv.id, content="On it!").count() == 1
+
+
+def test_member_can_still_message_after_operator_session_expired(db):
+    """The new gate only restricts OPERATOR sends -- a member message after expiry must
+    still succeed and open a fresh session, unaffected."""
+    _, operator, member, conv = _setup(db)
+    long_ago = datetime.now(timezone.utc) - timedelta(seconds=200)
+    chat_session_service.ensure_active_session(db, conversation=conv, now=long_ago)
+    db.commit()
+
+    msg = conversation_service.create_message(
+        db, project_id=conv.project_id, conversation_id=conv.id, sender=member, content="hello again", conversation=conv,
+    )
+    db.commit()
+
+    assert msg.id is not None
+    new_session = chat_session_service.get_latest_session(db, conversation_id=conv.id)
+    assert new_session.status == ChatSessionStatus.ACTIVE
 
 
 def test_operator_message_with_no_open_session_is_untracked_not_rejected(db):

@@ -337,6 +337,22 @@ def abandon_active_sessions_for_member(db: Session, *, project_id: int, member_i
     return abandoned
 
 
+def assert_operator_message_allowed(db: Session, *, conversation: Conversation) -> None:
+    """Gate called before persisting an OPERATOR message in an operator_member conversation.
+
+    Rejects once the conversation's latest chat session has ended (completed, auto-closed at
+    the 3-minute limit, or abandoned) -- `get_latest_session` lazily finalizes an expired
+    session first, so this is authoritative even if the background sweep hasn't run yet.
+    A conversation with no session yet (member hasn't sent a first message) is unaffected.
+    """
+    latest = get_latest_session(db, conversation_id=conversation.id)
+    if latest is not None and latest.status != ChatSessionStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This chat has expired and can no longer receive messages.",
+        )
+
+
 def on_message_persisted(db: Session, *, conversation: Conversation, sender_role: UserRole, created_at: datetime) -> None:
     """Single hook called by conversation_service.create_message right after a message is
     stored. Only operator_member conversations participate in session timing."""

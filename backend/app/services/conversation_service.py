@@ -989,6 +989,9 @@ def create_message(
                 member_id=conversation.member_id,
             ):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Member is not assigned to this operator")
+            from app.services import chat_session_service
+
+            chat_session_service.assert_operator_message_allowed(db, conversation=conversation)
         elif role_val == UserRole.MEMBER.value:
             if sender.id != conversation.member_id:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Member mismatch")

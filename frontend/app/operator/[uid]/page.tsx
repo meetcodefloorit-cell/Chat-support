@@ -135,6 +135,16 @@ export default function OperatorWorkspace() {
     [visibleConversations, selectedConversationId],
   );
 
+  // Server-authoritative: mirrors the same "session ended" check the backend enforces
+  // before accepting an operator message, so the input disables the instant the
+  // chat_session:update WS event reports a non-active status -- no page refresh needed.
+  const currentChatSession = selectedConversation ? sessionsByConversation[selectedConversation.id] ?? null : null;
+  const isChatSessionClosed =
+    selectedConversation?.type === "operator_member" &&
+    currentChatSession != null &&
+    currentChatSession.status != null &&
+    currentChatSession.status !== "active";
+
   const knownUsers = useMemo(() => {
     const map = new Map<number, User>();
     if (currentUser) map.set(currentUser.id, currentUser);
@@ -784,6 +794,10 @@ export default function OperatorWorkspace() {
       setError("Terminated operators can only contact admin.");
       return;
     }
+    if (isChatSessionClosed) {
+      setError("This chat has expired and can no longer receive messages.");
+      return;
+    }
     sendTypingStop();
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -1239,7 +1253,7 @@ export default function OperatorWorkspace() {
                           variant="outline"
                           tone="neutral"
                           onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading || isTerminated}
+                          disabled={uploading || isTerminated || isChatSessionClosed}
                         >
                           <PaperclipIcon />
                         </IconButton>
@@ -1249,9 +1263,15 @@ export default function OperatorWorkspace() {
                           onChange={onChatInputChange}
                           onBlur={sendTypingStop}
                           onKeyDown={onKeyDown}
-                          placeholder={isTerminated ? "Help note to admin…" : "Type a message…"}
+                          placeholder={
+                            isChatSessionClosed
+                              ? "This chat has ended."
+                              : isTerminated
+                                ? "Help note to admin…"
+                                : "Type a message…"
+                          }
                           rows={1}
-                          disabled={isTerminated && selectedConversation?.type !== "admin_operator"}
+                          disabled={isChatSessionClosed || (isTerminated && selectedConversation?.type !== "admin_operator")}
                           className="flex-1"
                         />
                         <IconButton
@@ -1259,7 +1279,11 @@ export default function OperatorWorkspace() {
                           tone="operator"
                           variant="solid"
                           onClick={onSendMessage}
-                          disabled={!chatInput.trim() || (isTerminated && selectedConversation?.type !== "admin_operator")}
+                          disabled={
+                            !chatInput.trim() ||
+                            isChatSessionClosed ||
+                            (isTerminated && selectedConversation?.type !== "admin_operator")
+                          }
                         >
                           <SendIcon />
                         </IconButton>
