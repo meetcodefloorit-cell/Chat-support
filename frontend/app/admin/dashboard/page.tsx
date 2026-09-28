@@ -3698,6 +3698,35 @@ export default function AdminDashboard() {
           <section className="flex-1 overflow-y-auto p-6">
             <div className="max-w-2xl mx-auto space-y-6">
               <PageHeader title="User Management" description="Create staff accounts and manage passwords." />
+
+              {currentUser.is_super_admin && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All Admins ({allAdmins.length})</CardTitle>
+                  </CardHeader>
+                  <CardBody>
+                    {allAdmins.length === 0 ? (
+                      <p className="text-sm text-slate-400">No admin accounts yet.</p>
+                    ) : (
+                      <div className="divide-y divide-white/5">
+                        {allAdmins.map((admin) => (
+                          <div key={admin.id} className="flex items-center justify-between gap-3 py-2.5">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-100 truncate">{admin.name}</p>
+                              <p className="text-xs text-slate-400 truncate">{admin.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {admin.is_super_admin && <Badge color="emerald">Super Admin</Badge>}
+                              <StatusBadge status={admin.is_active ? "active" : "inactive"} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardBody>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader>
                   <CardTitle>Create Operator / Admin</CardTitle>
