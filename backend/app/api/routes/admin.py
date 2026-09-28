@@ -8,7 +8,7 @@ from app.api.realtime import (
     broadcast_notification_counts,
     broadcast_operators_changed_sync,
 )
-from app.core.deps import ensure_project_access, get_current_user, require_admin
+from app.core.deps import ensure_project_access, get_current_user, require_admin, require_super_admin
 from app.core.config import settings
 from app.core.websocket_manager import manager
 from app.core.security import hash_password
@@ -62,6 +62,10 @@ def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Members must be created inside a project. Use the Admin Members panel (Create Member).",
         )
+    if payload.role == UserRole.ADMIN:
+        # Only the super admin may create another Admin account. This is enforced here
+        # regardless of what the frontend sends or hides in its UI.
+        require_super_admin(current_user)
 
     normalized_email = user_service.normalize_email(payload.email)
     existing = user_service.get_active_user_by_email(db, normalized_email)

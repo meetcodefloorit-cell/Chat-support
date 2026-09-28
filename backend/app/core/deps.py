@@ -3,6 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models import MembershipStatus, OperatorAssignment, Project, ProjectUser, User, UserRole, UserSession
@@ -58,6 +59,19 @@ def get_current_user(
 def require_admin(user: User) -> None:
     if user.role.value != "ADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+
+
+def is_super_admin(user: User) -> bool:
+    return user.role == UserRole.ADMIN and user.email.lower() == settings.super_admin_email.lower()
+
+
+def require_super_admin(user: User) -> None:
+    """Only the single super admin (matched by email, see settings.super_admin_email) may
+    create/manage other Admin accounts. A regular admin's role or a client-supplied flag
+    is never trusted for this check."""
+    require_admin(user)
+    if not is_super_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin privileges required")
 
 
 def get_active_project_or_404(db: Session, project_id: int) -> Project:

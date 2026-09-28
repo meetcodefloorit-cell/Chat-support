@@ -2017,19 +2017,22 @@ export default function AdminDashboard() {
       setError("Name, email, and password are required.");
       return;
     }
+    // Only a super admin may create another Admin; force Operator for regular admins
+    // regardless of any stale local state (backend enforces this independently too).
+    const roleToCreate: UserRole = currentUser?.is_super_admin ? newUserRole : "OPERATOR";
     try {
       await createUser(token, {
         name: newUserName.trim(),
         email: newUserEmail.trim(),
         password: newUserPassword,
-        role: newUserRole,
+        role: roleToCreate,
       });
       setNewUserName("");
       setNewUserEmail("");
       setNewUserPassword("");
       setNewUserRole("OPERATOR");
       await Promise.all([loadProjectData(), loadGlobalUsers()]);
-      showNotice(newUserRole === "ADMIN" ? "Admin created" : "Operator created");
+      showNotice(roleToCreate === "ADMIN" ? "Admin created" : "Operator created");
     } catch (e) {
       setError(parseError(e));
     }
@@ -3729,21 +3732,27 @@ export default function AdminDashboard() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Create Operator / Admin</CardTitle>
+                  <CardTitle>{currentUser.is_super_admin ? "Create Operator / Admin" : "Create Operator"}</CardTitle>
                 </CardHeader>
                 <CardBody>
                   <form onSubmit={onCreateUser} className="space-y-3">
                     <Input tone="admin" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder="Name" />
                     <Input tone="admin" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="Email" />
                     <Input tone="admin" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Password" />
-                    <Select
-                      tone="admin"
-                      value={newUserRole}
-                      onChange={(e) => setNewUserRole(e.target.value as UserRole)}
-                    >
-                      <option value="OPERATOR">Operator</option>
-                      <option value="ADMIN">Admin</option>
-                    </Select>
+                    {currentUser.is_super_admin ? (
+                      <Select
+                        tone="admin"
+                        value={newUserRole}
+                        onChange={(e) => setNewUserRole(e.target.value as UserRole)}
+                      >
+                        <option value="OPERATOR">Operator</option>
+                        <option value="ADMIN">Admin</option>
+                      </Select>
+                    ) : (
+                      <Select tone="admin" value="OPERATOR" disabled>
+                        <option value="OPERATOR">Operator</option>
+                      </Select>
+                    )}
                     <Button type="submit" tone="admin" disabled={!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()}>
                       Create user
                     </Button>

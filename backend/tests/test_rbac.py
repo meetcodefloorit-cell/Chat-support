@@ -5,7 +5,9 @@ from sqlalchemy import select
 from app.api.routes import admin as admin_routes
 from app.api.routes import projects as project_routes
 from app.api.routes import users as users_routes
+from app.core.config import settings
 from app.core.deps import ensure_project_access
+from app.schemas import UserCreate
 from app.models import (
     Conversation,
     ConversationType,
@@ -639,3 +641,51 @@ def test_admin_can_remove_project_logo(db):
 
     db.refresh(project)
     assert project.logo_url is None
+
+
+# ---------------------------------------------------------------------------
+# Role hierarchy: only the super admin may create/promote another Admin
+# ---------------------------------------------------------------------------
+
+def test_super_admin_can_create_operator_and_admin(db):
+    super_admin = _user(settings.super_admin_email, UserRole.ADMIN)
+    db.add(super_admin)
+    db.commit()
+
+    created_operator = admin_routes.create_user(
+        payload=UserCreate(email="new-op@t.com", name="New Op", password="secret123", role=UserRole.OPERATOR),
+        db=db,
+        current_user=super_admin,
+    )
+    assert created_operator.role == UserRole.OPERATOR
+
+    created_admin = admin_routes.create_user(
+        payload=UserCreate(email="new-admin@t.com", name="New Admin", password="secret123", role=UserRole.ADMIN),
+        db=db,
+        current_user=super_admin,
+    )
+    assert created_admin.role == UserRole.ADMIN
+
+
+def test_regular_admin_can_create_operator_but_not_admin(db):
+    regular_admin = _user("regular-admin-create@t.com", UserRole.ADMIN)
+    db.add(regular_admin)
+    db.commit()
+    assert regular_admin.email.lower() != settings.super_admin_email.lower()
+
+    created_operator = admin_routes.create_user(
+        payload=UserCreate(email="new-op2@t.com", name="New Op 2", password="secret123", role=UserRole.OPERATOR),
+        db=db,
+        current_user=regular_admin,
+    )
+    assert created_operator.role == UserRole.OPERATOR
+
+    with pytest.raises(HTTPException) as exc:
+        admin_routes.create_user(
+            payload=UserCreate(email="sneaky-admin@t.com", name="Sneaky", password="secret123", role=UserRole.ADMIN),
+            db=db,
+            current_user=regular_admin,
+        )
+    assert exc.value.status_code == 403
+
+    assert db.scalar(select(User).where(User.email == "sneaky-admin@t.com")) is None
