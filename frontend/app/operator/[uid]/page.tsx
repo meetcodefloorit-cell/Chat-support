@@ -742,10 +742,15 @@ export default function OperatorWorkspace() {
     }
   };
 
+  // Operator Panel shows only the member/customer's email, never their name (name stays
+  // available in the backend/API for roles that are meant to see it, e.g. Admin).
+  const identityLabel = (user: User, fallback: string): string =>
+    user.role === "MEMBER" ? user.email || fallback : user.name;
+
   const formatSender = (msg: Message): string => {
     if (currentUser && msg.sender_user_id === currentUser.id) return "You";
     const known = knownUsers.get(msg.sender_user_id);
-    if (known) return known.name;
+    if (known) return identityLabel(known, `Member #${msg.sender_user_id}`);
     if (msg.sender_role === "ADMIN") return "Admin";
     return `Member #${msg.sender_user_id}`;
   };
@@ -763,8 +768,8 @@ export default function OperatorWorkspace() {
     const member = knownUsers.get(memberId);
     return {
       userId: memberId,
-      label: member?.name || `Member #${memberId}`,
-      subtitle: member ? `${member.email} · ${member.uid}` : `Member #${memberId}`,
+      label: member?.email || `Member #${memberId}`,
+      subtitle: member ? member.uid : `Member #${memberId}`,
     };
   };
 
@@ -1220,7 +1225,10 @@ export default function OperatorWorkspace() {
                     </div>
                     {typingUserId && typingUserId !== currentUser?.id && (
                       <div className="shrink-0 px-4 py-1 text-xs text-slate-400 italic">
-                        {knownUsers.get(typingUserId)?.name || `User #${typingUserId}`} is typing…
+                        {(() => {
+                          const typingUser = knownUsers.get(typingUserId);
+                          return typingUser ? identityLabel(typingUser, `User #${typingUserId}`) : `User #${typingUserId}`;
+                        })()} is typing…
                       </div>
                     )}
                     <div className="shrink-0 border-t border-white/10 bg-bg-navy p-3">
